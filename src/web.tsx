@@ -186,7 +186,7 @@ class Tree extends preact.Component<Tree.Props> {
         }
         return <div>
             <div onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
-                <code>{inst.type.name}</code>: {inst.render()}
+                <code>{inst.type.name}: {inst.render()}</code>
             </div>
             {children}
         </div>;
@@ -232,7 +232,51 @@ async function main() {
             ofs: 'root.dos.e_lfanew',
             type: new schema.Struct('coff', [
                 { type: new schema.U32('sig') },
-                { type: new schema.U16('machine') },
+                {
+                    type: new schema.Struct('FileHeader', [  // IMAGE_FILE_HEADER
+                        { type: new schema.U16('Machine') },
+                        { type: new schema.U16('NumberOfSections') },
+                        { type: new schema.U32('TimeDateStamp') },
+                        { type: new schema.U32('PointerToSymbolTable') },
+                        { type: new schema.U32('NumberOfSymbols') },
+                        { type: new schema.U16('SizeOfOptionalHeader') },
+                        { type: new schema.U16('Characteristics') },
+                    ])
+                },
+                {
+                    type: new schema.Struct('OptionalHeader', [  // IMAGE_OPTIONAL_HEADER
+                        { type: new schema.U16('Magic') },
+                        { type: new schema.U16('LinkerVersion') },
+                        { type: new schema.U32('SizeOfCode') },
+                        { type: new schema.U32('SizeOfInitializedData') },
+                        { type: new schema.U32('SizeOfUninitializedData') },
+                        { type: new schema.U32('AddressOfEntryPoint') },
+                        { type: new schema.U32('BaseOfCode') },
+                        { type: new schema.U32('BaseOfData') },
+                        { type: new schema.U32('ImageBase') },
+                        { type: new schema.U32('SectionAlignment') },
+                        { type: new schema.U32('FileAlignment') },
+                        { type: new schema.U16('MajorOperatingSystemVersion') },
+                        { type: new schema.U16('MinorOperatingSystemVersion') },
+                        { type: new schema.U16('MajorImageVersion') },
+                        { type: new schema.U16('MinorImageVersion') },
+                        { type: new schema.U16('MajorSubsystemVersion') },
+                        { type: new schema.U16('MinorSubsystemVersion') },
+                        { type: new schema.U32('Win32VersionValue') },
+                        { type: new schema.U32('SizeOfImage') },
+                        { type: new schema.U32('SizeOfHeaders') },
+                        { type: new schema.U32('CheckSum') },
+                        { type: new schema.U16('Subsystem') },
+                        { type: new schema.U16('DllCharacteristics') },
+                        { type: new schema.U32('SizeOfStackReserve') },
+                        { type: new schema.U32('SizeOfStackCommit') },
+                        { type: new schema.U32('SizeOfHeapReserve') },
+                        { type: new schema.U32('SizeOfHeapCommit') },
+                        { type: new schema.U32('LoaderFlags') },
+                        { type: new schema.U32('NumberOfRvaAndSizes') },
+
+                    ])
+                }
             ])
         }
     ]);
