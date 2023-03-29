@@ -1,0 +1,15 @@
+{
+  "name": "delve",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "serve": "esbuild --bundle --target=es2020 --format=esm --sourcemap --servedir=src --outfile=src/bundle.js src/web.tsx"
+  },
+  "devDependencies": {
+    "esbuild": "^0.17.14",
+    "typescript": "^5.0.2"
+  },
+  "dependencies": {
+    "preact": "^10.13.2"
+  }
+}

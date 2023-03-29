@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata&family=Inter&display=swap');
+
+html {
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+}
+
+pre,
+code,
+tt {
+    font-family: Inconsolata, monospace;
+    margin: 0;
+}
+
+#raw {
+    display: flex;
+}
+
+.grid {
+    cursor: default;
+}
+
+.grid span.hover {
+    outline: solid 1px red;
+}
+
+.hex span {
+    margin-right: 0.6ex;
+}
