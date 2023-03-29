@@ -67,18 +67,15 @@ class ASCIIView extends GridView {
 namespace RawView {
     export interface Props {
         buf: DataView;
+        onHover(index: number | undefined): void;
+        hovered?: number;
     }
     export interface State {
-        hovered?: number;
         offsetY: number;
     }
 }
 class RawView extends preact.Component<RawView.Props, RawView.State> {
     state: RawView.State = { offsetY: 0 };
-
-    onHover = (index: number | undefined) => {
-        this.setState({ hovered: index });
-    };
 
     onWheel = (ev: WheelEvent) => {
         let offsetY = Math.max(this.state.offsetY + ev.deltaY, 0);
@@ -92,9 +89,9 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
         buf = new DataView(buf.buffer, buf.byteOffset + ofs);
 
         return <div id='raw' onWheel={this.onWheel}>
-            <HexView buf={buf} hovered={this.state.hovered} onHover={this.onHover} />
+            <HexView buf={buf} hovered={this.props.hovered} onHover={this.props.onHover} />
             <div style='width: 2ex' />
-            <ASCIIView buf={buf} hovered={this.state.hovered} onHover={this.onHover} />
+            <ASCIIView buf={buf} hovered={this.props.hovered} onHover={this.props.onHover} />
         </div>;
     }
 }
@@ -102,19 +99,28 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
 namespace Tree {
     export interface Props {
         inst: schema.TypeInst;
+        onHover(index: number | undefined): void;
     }
 }
 class Tree extends preact.Component<Tree.Props> {
+    onMouseEnter = () => {
+        this.props.onHover(this.props.inst.ofs);
+    };
+    onMouseLeave = () => {
+        this.props.onHover(undefined);
+    };
     render() {
         const { inst } = this.props;
         let children;
         if (inst.children) {
             children = <div style={{ paddingLeft: '2ex' }}>
-                {inst.children.map(c => <Tree inst={c} />)}
+                {inst.children.map(c => <Tree inst={c} onHover={this.props.onHover} />)}
             </div>;
         }
         return <div>
-            <div><code>{inst.type.name}</code>: {inst.render()}</div>
+            <div onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
+                <code>{inst.type.name}</code>: {inst.render()}
+            </div>
             {children}
         </div>;
     }
@@ -125,13 +131,20 @@ namespace Page {
         buf: DataView;
         inst: schema.TypeInst;
     }
+    export interface State {
+        hovered?: number;
+    }
 }
-class Page extends preact.Component<Page.Props> {
+class Page extends preact.Component<Page.Props, Page.State> {
+    onHover = (index: number | undefined) => {
+        this.setState({ hovered: index });
+    };
+
     render() {
         return <main>
-            <RawView buf={this.props.buf} />
+            <RawView buf={this.props.buf} hovered={this.state.hovered} onHover={this.onHover} />
             <br />
-            <Tree inst={this.props.inst} />
+            <Tree inst={this.props.inst} onHover={this.onHover} />
         </main>;
     }
 }
@@ -140,12 +153,14 @@ async function main() {
     const data = await (await fetch('BASS.DLL')).arrayBuffer();
     const buf = new DataView(data);
 
-    const type = new schema.Struct('dos', [
-        new schema.Literal('e_magic', 2),
-        new schema.Literal('e_junk', 0x40 - 4 - 2),
-        new schema.U32('e_lfanew'),
+    const type = new schema.Struct('pe', [
+        new schema.Struct('dos', [
+            new schema.Literal('e_magic', 2),
+            new schema.Literal('e_junk', 0x40 - 4 - 2),
+            new schema.U32('e_lfanew'),
+        ])
     ]);
-    const [inst, _] = type.parse(buf);
+    const inst = type.parse(buf);
 
     preact.render(<Page buf={buf} inst={inst} />, document.body);
 }
