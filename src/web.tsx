@@ -233,8 +233,8 @@ async function main() {
         },
         {
             ofs: 'root.dos.e_lfanew',
-            name: 'coff', type: new schema.Struct([
-                { name: 'sig', type: new schema.Literal(4, true) },
+            name: 'IMAGE_NT_HEADERS32', type: new schema.Struct([
+                { name: 'Signature', type: new schema.Literal(4, true) },
                 {
                     name: 'FileHeader', type: new schema.Struct([  // IMAGE_FILE_HEADER
                         {
