@@ -3,6 +3,9 @@
 html {
     font-family: Inter, sans-serif;
     font-size: 13px;
+    width: 100%;
+    height: 100%;
+    display: flex;
 }
 
 pre,
@@ -12,8 +15,17 @@ tt {
     margin: 0;
 }
 
+body,
+main {
+    margin: 0;
+    display: flex;
+    flex: 1;
+}
+
 #raw {
     display: flex;
+    align-items: flex-start;
+    padding: 1ex;
 }
 
 .grid {
@@ -33,4 +45,10 @@ tt {
     width: 100%;
     height: 100%;
     pointer-events: none;
+}
+
+#tree {
+    padding: 1ex;
+    overflow-y: auto;
+    flex: 1;
 }

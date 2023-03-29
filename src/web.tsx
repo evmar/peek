@@ -162,13 +162,13 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
     }
 }
 
-namespace Tree {
+namespace TreeNode {
     export interface Props {
         inst: schema.TypeInst;
         onHover(sel: [number, number?] | undefined): void;
     }
 }
-class Tree extends preact.Component<Tree.Props> {
+class TreeNode extends preact.Component<TreeNode.Props> {
     onMouseEnter = () => {
         const { inst } = this.props;
         this.props.onHover([inst.ofs, inst.ofs + inst.len]);
@@ -181,7 +181,7 @@ class Tree extends preact.Component<Tree.Props> {
         let children;
         if (inst.children) {
             children = <div style={{ paddingLeft: '2ex' }}>
-                {inst.children.map(c => <Tree inst={c} onHover={this.props.onHover} />)}
+                {inst.children.map(c => <TreeNode inst={c} onHover={this.props.onHover} />)}
             </div>;
         }
         return <div>
@@ -211,7 +211,9 @@ class Page extends preact.Component<Page.Props, Page.State> {
         return <main>
             <RawView buf={this.props.buf} sel={this.state.sel} onHover={this.onHover} />
             <br />
-            <Tree inst={this.props.inst} onHover={this.onHover} />
+            <div id='tree'>
+                <TreeNode inst={this.props.inst} onHover={this.onHover} />
+            </div>
         </main>;
     }
 }
