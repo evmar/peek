@@ -1,6 +1,5 @@
 import { hex } from "./hex";
 
-
 export interface Type {
     name: string;
     parse(view: DataView): TypeInst;
@@ -37,18 +36,34 @@ class LiteralInst implements TypeInst {
     }
 }
 
-export class U32 implements Type {
+abstract class Numeric implements Type {
     constructor(readonly name: string) { }
+    abstract getNum(view: DataView): number;
+    abstract len: number;
     parse(view: DataView): TypeInst {
-        const value = view.getUint32(0, true);
-        return new U32Inst(this, view.byteOffset, value);
+        const value = this.getNum(view);
+        return new NumericInst(this, view.byteOffset, value);
     }
 }
-class U32Inst implements TypeInst {
-    len = 4;
-    constructor(readonly type: U32, readonly ofs: number, readonly value: number) { }
+class NumericInst implements TypeInst {
+    len = this.type.len;
+    constructor(readonly type: Numeric, readonly ofs: number, readonly value: number) { }
     render(): string {
         return '0x' + hex(this.value, 0);
+    }
+}
+
+export class U16 extends Numeric {
+    len = 2;
+    getNum(view: DataView): number {
+        return view.getUint16(0, true);
+    }
+}
+
+export class U32 extends Numeric {
+    len = 4;
+    getNum(view: DataView): number {
+        return view.getUint32(0, true);
     }
 }
 
