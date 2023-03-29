@@ -17,10 +17,15 @@ namespace GridView {
         hovered?: number;
         onHover(index: number | undefined): void;
     }
+    export interface State {
+        chWidth: number;
+        chHeight: number;
+    }
 }
-abstract class GridView extends preact.Component<GridView.Props> {
+abstract class GridView extends preact.Component<GridView.Props, GridView.State> {
     abstract class: string;
     abstract cell(byte: number): string;
+    ref = preact.createRef<HTMLPreElement>();
 
     onMouseEnter = (ev: MouseEvent) => {
         let node = ev.target as Element;
@@ -31,20 +36,58 @@ abstract class GridView extends preact.Component<GridView.Props> {
     onMouseLeave = () => {
         this.props.onHover(undefined);
     };
+
+    componentDidMount() {
+        document.fonts.ready.then(() => {
+            // Need to wait for fonts to load before measuring character size.
+            const rect = this.ref.current!.getBoundingClientRect();
+            this.setState({
+                chWidth: rect.width,
+                chHeight: rect.height,
+            });
+        });
+    }
+
     render(props: GridView.Props): preact.ComponentChild {
+        if (!this.state.chWidth) {
+            return <pre ref={this.ref} class={'grid ' + this.class}>0</pre>;
+        }
+
         const rows = [];
         let index = 0;
         for (let y = 0; y < 16; y++) {
             const row = [];
             for (let x = 0; x < 16; x++) {
                 const b = props.buf.getUint8(index);
-                const className = index === this.props.hovered ? 'hover' : undefined;
-                row.push(<span class={className} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{this.cell(b)}</span>);
+                row.push(<span onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{this.cell(b)}</span>);
                 index++;
             }
             rows.push(<div>{row}</div>);
         }
-        return <pre class={'grid ' + this.class}>{rows}</pre>;
+
+        let hover;
+        if (this.props.hovered !== undefined && this.state.chWidth > 0) {
+            const letterWidth = this.state.chWidth;
+            const letterHeight = this.state.chHeight;
+            const boxWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
+            const cellWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
+            const chX = this.props.hovered % 16;
+            const chY = Math.floor(this.props.hovered / 16);
+            const ofs = 0.5;
+            const pathops =
+                `M${chX * cellWidth - ofs} ${chY * letterHeight - ofs}` +
+                `h${boxWidth + 2 * ofs}` +
+                `v${letterHeight + 2 * ofs}` +
+                `h-${boxWidth + 2 * ofs}` +
+                `Z`;
+            hover = <svg class='hover-box'>
+                <path d={pathops} stroke='red' fill='none' />
+            </svg>;
+        }
+        return <pre ref={this.ref} class={'grid ' + this.class}>
+            {rows}
+            {hover}
+        </pre>;
     }
 }
 
