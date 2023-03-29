@@ -131,3 +131,24 @@ class StructInst implements TypeInst {
         return '';
     }
 }
+
+export class List implements Type {
+    constructor(readonly inner: Type, readonly count: number) { }
+    parse(view: DataView): TypeInst {
+        let ofs = 0;
+        let insts = [];
+        for (let i = 0; i < this.count; i++) {
+            const inst = this.inner.parse(new DataView(view.buffer, view.byteOffset + ofs));
+            insts.push({ inst });
+            ofs += inst.len;
+        }
+        return new ListInst(this, view.byteOffset, insts);
+    }
+}
+class ListInst implements TypeInst {
+    len = this.children.length * this.children![0].inst.len;
+    constructor(readonly type: List, readonly ofs: number, readonly children: TypeInstChild[]) { }
+    render(): string {
+        return `${this.children.length} entries`;
+    }
+}

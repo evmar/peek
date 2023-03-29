@@ -187,7 +187,7 @@ class TreeNode extends preact.Component<TreeNode.Props> {
         }
         return <div>
             <div onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
-                <code>{this.props.name ? this.props.name + ': ' : ''}{inst.render()}</code>
+                <code>{this.props.name ? this.props.name + ': ' : '-'}{inst.render()}</code>
             </div>
             {children}
         </div>;
@@ -222,6 +222,11 @@ class Page extends preact.Component<Page.Props, Page.State> {
 async function main() {
     const data = await (await fetch('BASS.DLL')).arrayBuffer();
     const buf = new DataView(data);
+
+    const IMAGE_DATA_DIRECTORY = new schema.Struct([
+        { name: 'VirtualAddress', type: new schema.U32() },
+        { name: 'Size', type: new schema.U32() },
+    ])
 
     const type = new schema.Struct([
         {
@@ -281,9 +286,11 @@ async function main() {
                         { name: 'SizeOfHeapCommit', type: new schema.U32() },
                         { name: 'LoaderFlags', type: new schema.U32() },
                         { name: 'NumberOfRvaAndSizes', type: new schema.U32() },
-
                     ])
-                }
+                },
+                {
+                    name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY, 0x10)
+                },
             ])
         }
     ]);
