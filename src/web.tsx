@@ -14,8 +14,8 @@ function findIndex(node: Element): number {
 namespace GridView {
     export interface Props {
         buf: DataView;
-        hovered?: number;
-        onHover(index: number | undefined): void;
+        sel?: [number, number?];
+        onHover(sel: [number, number?] | undefined): void;
     }
     export interface State {
         chWidth: number;
@@ -31,7 +31,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         let node = ev.target as Element;
         let x = findIndex(node);
         let y = findIndex(node.parentElement!);
-        this.props.onHover(y * 16 + x);
+        this.props.onHover([y * 16 + x]);
     };
     onMouseLeave = () => {
         this.props.onHover(undefined);
@@ -66,22 +66,45 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         }
 
         let hover;
-        if (this.props.hovered !== undefined && this.state.chWidth > 0) {
+        if (this.props.sel && this.state.chWidth > 0) {
             const letterWidth = this.state.chWidth;
             const letterHeight = this.state.chHeight;
-            const boxWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
-            const cellWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
-            const chX = this.props.hovered % 16;
-            const chY = Math.floor(this.props.hovered / 16);
-            const ofs = 0.5;
-            const pathops =
-                `M${chX * cellWidth - ofs} ${chY * letterHeight - ofs}` +
-                `h${boxWidth + 2 * ofs}` +
-                `v${letterHeight + 2 * ofs}` +
-                `h-${boxWidth + 2 * ofs}` +
-                `Z`;
+            const spacerWidth = this.class === 'hex' ? 0.5 * letterWidth : 0;
+            const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
+            const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
+            const pad = 1;
+            const [sel, selEnd] = this.props.sel;
+            const [cx0, cy0] = [sel % 16, Math.floor(sel / 16)];
+            const [cx1, cy1] = selEnd ? [(selEnd - 1) % 16, Math.floor((selEnd - 1) / 16)] : [cx0, cy0];
+            // Selection possibly looks like:
+            //          start-> +----+
+            //              +---+    | <- right wall
+            // left wall -> |        |
+            //              |      +-+
+            //              +------+ <- end
+            const pathops = [
+                // upper left
+                `M${cx0 * cellSWidth - pad} ${cy0 * letterHeight - pad}`
+            ];
+            if (cy1 > cy0) {
+                // right wall
+                pathops.push(`L${16 * cellSWidth + pad} ${cy0 * letterHeight - pad}`);
+                pathops.push(`L${16 * cellSWidth + pad} ${cy1 * letterHeight - pad}`);
+            }
+            // end upper right
+            pathops.push(`L${cx1 * cellSWidth + cellWidth + pad} ${cy1 * letterHeight - pad}`);
+            // end lower right
+            pathops.push(`L${cx1 * cellSWidth + cellWidth + pad} ${cy1 * letterHeight + letterHeight + pad}`);
+            if (cy1 > cy0) {
+                // left wall
+                pathops.push(`L${-pad} ${cy1 * letterHeight + letterHeight + pad}`);
+                pathops.push(`L${-pad} ${+pad + cy0 * letterHeight + letterHeight}`);
+            }
+            // end lower left
+            pathops.push(`L${cx0 * cellSWidth - pad} ${cy0 * letterHeight + letterHeight + pad}`);
+            pathops.push(`Z`);
             hover = <svg class='hover-box'>
-                <path d={pathops} stroke='red' fill='none' />
+                <path d={pathops.join(' ')} stroke='red' fill='none' />
             </svg>;
         }
         return <pre ref={this.ref} class={'grid ' + this.class}>
@@ -110,8 +133,8 @@ class ASCIIView extends GridView {
 namespace RawView {
     export interface Props {
         buf: DataView;
-        onHover(index: number | undefined): void;
-        hovered?: number;
+        onHover(sel: [number, number?] | undefined): void;
+        sel?: [number, number?];
     }
     export interface State {
         offsetY: number;
@@ -132,9 +155,9 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
         buf = new DataView(buf.buffer, buf.byteOffset + ofs);
 
         return <div id='raw' onWheel={this.onWheel}>
-            <HexView buf={buf} hovered={this.props.hovered} onHover={this.props.onHover} />
+            <HexView buf={buf} sel={this.props.sel} onHover={this.props.onHover} />
             <div style='width: 2ex' />
-            <ASCIIView buf={buf} hovered={this.props.hovered} onHover={this.props.onHover} />
+            <ASCIIView buf={buf} sel={this.props.sel} onHover={this.props.onHover} />
         </div>;
     }
 }
@@ -142,12 +165,13 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
 namespace Tree {
     export interface Props {
         inst: schema.TypeInst;
-        onHover(index: number | undefined): void;
+        onHover(sel: [number, number?] | undefined): void;
     }
 }
 class Tree extends preact.Component<Tree.Props> {
     onMouseEnter = () => {
-        this.props.onHover(this.props.inst.ofs);
+        const { inst } = this.props;
+        this.props.onHover([inst.ofs, inst.ofs + inst.len]);
     };
     onMouseLeave = () => {
         this.props.onHover(undefined);
@@ -175,17 +199,17 @@ namespace Page {
         inst: schema.TypeInst;
     }
     export interface State {
-        hovered?: number;
+        sel?: [number, number?];
     }
 }
 class Page extends preact.Component<Page.Props, Page.State> {
-    onHover = (index: number | undefined) => {
-        this.setState({ hovered: index });
+    onHover = (sel: [number, number?] | undefined) => {
+        this.setState({ sel });
     };
 
     render() {
         return <main>
-            <RawView buf={this.props.buf} hovered={this.state.hovered} onHover={this.onHover} />
+            <RawView buf={this.props.buf} sel={this.state.sel} onHover={this.onHover} />
             <br />
             <Tree inst={this.props.inst} onHover={this.onHover} />
         </main>;
