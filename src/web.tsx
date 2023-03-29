@@ -13,8 +13,6 @@ function findIndex(node: Element): number {
     return -1;
 }
 
-
-
 namespace GridView {
     export interface Props {
         buf: DataView;
@@ -74,16 +72,28 @@ namespace RawView {
     }
     export interface State {
         hovered?: number;
+        offsetY: number;
     }
 }
 class RawView extends preact.Component<RawView.Props, RawView.State> {
+    state: RawView.State = { offsetY: 0 };
+
     onHover = (index: number | undefined) => {
         this.setState({ hovered: index });
     };
 
+    onWheel = (ev: WheelEvent) => {
+        let offsetY = Math.max(this.state.offsetY + ev.deltaY, 0);
+        this.setState({ offsetY });
+    }
+
     render(props: GridView.Props): preact.ComponentChild {
-        const { buf } = this.props;
-        return <div id='raw'>
+        let { buf } = this.props;
+
+        const ofs = Math.floor(this.state.offsetY / 16) * 16;
+        buf = new DataView(buf.buffer, buf.byteOffset + ofs);
+
+        return <div id='raw' onWheel={this.onWheel}>
             <HexView buf={buf} hovered={this.state.hovered} onHover={this.onHover} />
             <div style='width: 2ex' />
             <ASCIIView buf={buf} hovered={this.state.hovered} onHover={this.onHover} />
