@@ -237,7 +237,11 @@ async function main() {
                 { name: 'sig', type: new schema.U32() },
                 {
                     name: 'FileHeader', type: new schema.Struct([  // IMAGE_FILE_HEADER
-                        { name: 'Machine', type: new schema.U16() },
+                        {
+                            name: 'Machine', type: new schema.NumEnum(new schema.U16(), {
+                                0x14c: 'IMAGE_FILE_MACHINE_I386',
+                            })
+                        },
                         { name: 'NumberOfSections', type: new schema.U16() },
                         { name: 'TimeDateStamp', type: new schema.U32() },
                         { name: 'PointerToSymbolTable', type: new schema.U32() },

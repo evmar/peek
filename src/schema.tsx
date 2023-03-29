@@ -42,7 +42,7 @@ class LiteralInst implements TypeInst {
 abstract class Numeric implements Type {
     abstract getNum(view: DataView): number;
     abstract len: number;
-    parse(view: DataView): TypeInst {
+    parse(view: DataView): NumericInst {
         const value = this.getNum(view);
         return new NumericInst(this, view.byteOffset, value);
     }
@@ -66,6 +66,25 @@ export class U32 extends Numeric {
     len = 4;
     getNum(view: DataView): number {
         return view.getUint32(0, true);
+    }
+}
+
+export class NumEnum implements Type {
+    constructor(readonly num: Numeric, readonly values: { [num: number]: string }) { }
+    parse(view: DataView): TypeInst {
+        return new NumEnumInst(this, this.num.parse(view));
+    }
+}
+export class NumEnumInst implements TypeInst {
+    ofs = this.num.ofs;
+    len = this.num.len;
+    constructor(readonly type: NumEnum, readonly num: NumericInst) { }
+    render(): string {
+        const name = this.type.values[this.num.value];
+        if (name) {
+            return `${name} (${this.num.render()})`;
+        }
+        return this.num.render();
     }
 }
 
