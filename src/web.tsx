@@ -1,6 +1,6 @@
 import * as preact from 'preact';
 import { h, Fragment } from 'preact';
-import { hex } from './hex';
+import { hex, isPrintable } from './hex';
 import * as schema from './schema';
 
 function findIndex(node: Element): number {
@@ -124,7 +124,7 @@ class HexView extends GridView {
 class ASCIIView extends GridView {
     class = 'ascii';
     cell(byte: number): string {
-        if (byte >= 0x20 && byte < 0x7F)
+        if (isPrintable(byte))
             return String.fromCharCode(byte);
         return '.';
     }
@@ -226,15 +226,15 @@ async function main() {
     const type = new schema.Struct([
         {
             name: 'dos', type: new schema.Struct([
-                { name: 'e_magic', type: new schema.Literal(2) },
-                { name: 'e_junk', type: new schema.Literal(0x40 - 4 - 2) },
+                { name: 'e_magic', type: new schema.Literal(2, true) },
+                { name: 'e_junk', type: new schema.Literal(0x40 - 4 - 2, false) },
                 { name: 'e_lfanew', type: new schema.U32() },
             ])
         },
         {
             ofs: 'root.dos.e_lfanew',
             name: 'coff', type: new schema.Struct([
-                { name: 'sig', type: new schema.U32() },
+                { name: 'sig', type: new schema.Literal(4, true) },
                 {
                     name: 'FileHeader', type: new schema.Struct([  // IMAGE_FILE_HEADER
                         {

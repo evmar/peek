@@ -1,4 +1,4 @@
-import { hex } from "./hex";
+import { hex, isPrintable } from "./hex";
 
 export interface Type {
     parse(view: DataView): TypeInst;
@@ -17,9 +17,9 @@ export interface TypeInst {
 }
 
 export class Literal implements Type {
-    constructor(readonly expected: number) { }
+    constructor(readonly expected: number, readonly text: boolean) { }
     parse(view: DataView): TypeInst {
-        const value = new DataView(view.buffer, 0, this.expected);
+        const value = new DataView(view.buffer, view.byteOffset, this.expected);
         return new LiteralInst(this, view.byteOffset, value);
     }
 }
@@ -29,13 +29,27 @@ class LiteralInst implements TypeInst {
     render(): string {
         let buf = [];
         for (let i = 0; i < this.type.expected; i++) {
-            buf.push(hex(this.value.getUint8(i)));
-            if (i > 10) {
-                buf.push('...');
+            const byte = this.value.getUint8(i);
+            if (this.type.text) {
+                if (isPrintable(byte)) {
+                    buf.push(String.fromCharCode(byte));
+                } else {
+                    switch (byte) {
+                        case 0: buf.push('\\0'); break;
+                        default: buf.push('\\x' + hex(byte));
+                    }
+                }
+            } else {
+                buf.push(hex(byte));
+            }
+            if (i > 8) {
+                buf.push(' [...]');
                 break;
             }
         }
-        return buf.join('');
+        let str = buf.join('');
+        if (this.type.text) str = `'${str}'`;
+        return str;
     }
 }
 
