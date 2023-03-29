@@ -164,6 +164,7 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
 
 namespace TreeNode {
     export interface Props {
+        name?: string;
         inst: schema.TypeInst;
         onHover(sel: [number, number?] | undefined): void;
     }
@@ -181,12 +182,12 @@ class TreeNode extends preact.Component<TreeNode.Props> {
         let children;
         if (inst.children) {
             children = <div style={{ paddingLeft: '2ex' }}>
-                {inst.children.map(c => <TreeNode inst={c} onHover={this.props.onHover} />)}
+                {inst.children.map(({ name, inst }) => <TreeNode name={name} inst={inst} onHover={this.props.onHover} />)}
             </div>;
         }
         return <div>
             <div onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
-                <code>{inst.type.name}: {inst.render()}</code>
+                <code>{this.props.name ? this.props.name + ': ' : ''}{inst.render()}</code>
             </div>
             {children}
         </div>;
@@ -212,7 +213,7 @@ class Page extends preact.Component<Page.Props, Page.State> {
             <RawView buf={this.props.buf} sel={this.state.sel} onHover={this.onHover} />
             <br />
             <div id='tree'>
-                <TreeNode inst={this.props.inst} onHover={this.onHover} />
+                <TreeNode name={'file'} inst={this.props.inst} onHover={this.onHover} />
             </div>
         </main>;
     }
@@ -222,60 +223,60 @@ async function main() {
     const data = await (await fetch('BASS.DLL')).arrayBuffer();
     const buf = new DataView(data);
 
-    const type = new schema.Struct('pe', [
+    const type = new schema.Struct([
         {
-            type: new schema.Struct('dos', [
-                { type: new schema.Literal('e_magic', 2) },
-                { type: new schema.Literal('e_junk', 0x40 - 4 - 2) },
-                { type: new schema.U32('e_lfanew') },
+            name: 'dos', type: new schema.Struct([
+                { name: 'e_magic', type: new schema.Literal(2) },
+                { name: 'e_junk', type: new schema.Literal(0x40 - 4 - 2) },
+                { name: 'e_lfanew', type: new schema.U32() },
             ])
         },
         {
             ofs: 'root.dos.e_lfanew',
-            type: new schema.Struct('coff', [
-                { type: new schema.U32('sig') },
+            name: 'coff', type: new schema.Struct([
+                { name: 'sig', type: new schema.U32() },
                 {
-                    type: new schema.Struct('FileHeader', [  // IMAGE_FILE_HEADER
-                        { type: new schema.U16('Machine') },
-                        { type: new schema.U16('NumberOfSections') },
-                        { type: new schema.U32('TimeDateStamp') },
-                        { type: new schema.U32('PointerToSymbolTable') },
-                        { type: new schema.U32('NumberOfSymbols') },
-                        { type: new schema.U16('SizeOfOptionalHeader') },
-                        { type: new schema.U16('Characteristics') },
+                    name: 'FileHeader', type: new schema.Struct([  // IMAGE_FILE_HEADER
+                        { name: 'Machine', type: new schema.U16() },
+                        { name: 'NumberOfSections', type: new schema.U16() },
+                        { name: 'TimeDateStamp', type: new schema.U32() },
+                        { name: 'PointerToSymbolTable', type: new schema.U32() },
+                        { name: 'NumberOfSymbols', type: new schema.U32() },
+                        { name: 'SizeOfOptionalHeader', type: new schema.U16() },
+                        { name: 'Characteristics', type: new schema.U16() },
                     ])
                 },
                 {
-                    type: new schema.Struct('OptionalHeader', [  // IMAGE_OPTIONAL_HEADER
-                        { type: new schema.U16('Magic') },
-                        { type: new schema.U16('LinkerVersion') },
-                        { type: new schema.U32('SizeOfCode') },
-                        { type: new schema.U32('SizeOfInitializedData') },
-                        { type: new schema.U32('SizeOfUninitializedData') },
-                        { type: new schema.U32('AddressOfEntryPoint') },
-                        { type: new schema.U32('BaseOfCode') },
-                        { type: new schema.U32('BaseOfData') },
-                        { type: new schema.U32('ImageBase') },
-                        { type: new schema.U32('SectionAlignment') },
-                        { type: new schema.U32('FileAlignment') },
-                        { type: new schema.U16('MajorOperatingSystemVersion') },
-                        { type: new schema.U16('MinorOperatingSystemVersion') },
-                        { type: new schema.U16('MajorImageVersion') },
-                        { type: new schema.U16('MinorImageVersion') },
-                        { type: new schema.U16('MajorSubsystemVersion') },
-                        { type: new schema.U16('MinorSubsystemVersion') },
-                        { type: new schema.U32('Win32VersionValue') },
-                        { type: new schema.U32('SizeOfImage') },
-                        { type: new schema.U32('SizeOfHeaders') },
-                        { type: new schema.U32('CheckSum') },
-                        { type: new schema.U16('Subsystem') },
-                        { type: new schema.U16('DllCharacteristics') },
-                        { type: new schema.U32('SizeOfStackReserve') },
-                        { type: new schema.U32('SizeOfStackCommit') },
-                        { type: new schema.U32('SizeOfHeapReserve') },
-                        { type: new schema.U32('SizeOfHeapCommit') },
-                        { type: new schema.U32('LoaderFlags') },
-                        { type: new schema.U32('NumberOfRvaAndSizes') },
+                    name: 'OptionalHeader', type: new schema.Struct([  // IMAGE_OPTIONAL_HEADER
+                        { name: 'Magic', type: new schema.U16() },
+                        { name: 'LinkerVersion', type: new schema.U16() },
+                        { name: 'SizeOfCode', type: new schema.U32() },
+                        { name: 'SizeOfInitializedData', type: new schema.U32() },
+                        { name: 'SizeOfUninitializedData', type: new schema.U32() },
+                        { name: 'AddressOfEntryPoint', type: new schema.U32() },
+                        { name: 'BaseOfCode', type: new schema.U32() },
+                        { name: 'BaseOfData', type: new schema.U32() },
+                        { name: 'ImageBase', type: new schema.U32() },
+                        { name: 'SectionAlignment', type: new schema.U32() },
+                        { name: 'FileAlignment', type: new schema.U32() },
+                        { name: 'MajorOperatingSystemVersion', type: new schema.U16() },
+                        { name: 'MinorOperatingSystemVersion', type: new schema.U16() },
+                        { name: 'MajorImageVersion', type: new schema.U16() },
+                        { name: 'MinorImageVersion', type: new schema.U16() },
+                        { name: 'MajorSubsystemVersion', type: new schema.U16() },
+                        { name: 'MinorSubsystemVersion', type: new schema.U16() },
+                        { name: 'Win32VersionValue', type: new schema.U32() },
+                        { name: 'SizeOfImage', type: new schema.U32() },
+                        { name: 'SizeOfHeaders', type: new schema.U32() },
+                        { name: 'CheckSum', type: new schema.U32() },
+                        { name: 'Subsystem', type: new schema.U16() },
+                        { name: 'DllCharacteristics', type: new schema.U16() },
+                        { name: 'SizeOfStackReserve', type: new schema.U32() },
+                        { name: 'SizeOfStackCommit', type: new schema.U32() },
+                        { name: 'SizeOfHeapReserve', type: new schema.U32() },
+                        { name: 'SizeOfHeapCommit', type: new schema.U32() },
+                        { name: 'LoaderFlags', type: new schema.U32() },
+                        { name: 'NumberOfRvaAndSizes', type: new schema.U32() },
 
                     ])
                 }

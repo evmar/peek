@@ -1,20 +1,23 @@
 import { hex } from "./hex";
 
 export interface Type {
-    name: string;
     parse(view: DataView): TypeInst;
 }
 
+interface TypeInstChild {
+    name?: string;
+    inst: TypeInst;
+}
 export interface TypeInst {
     type: Type;
     ofs: number;
     len: number;
     render(): string;
-    children?: TypeInst[];
+    children?: Array<TypeInstChild>;
 }
 
 export class Literal implements Type {
-    constructor(readonly name: string, readonly expected: number) { }
+    constructor(readonly expected: number) { }
     parse(view: DataView): TypeInst {
         const value = new DataView(view.buffer, 0, this.expected);
         return new LiteralInst(this, view.byteOffset, value);
@@ -37,7 +40,6 @@ class LiteralInst implements TypeInst {
 }
 
 abstract class Numeric implements Type {
-    constructor(readonly name: string) { }
     abstract getNum(view: DataView): number;
     abstract len: number;
     parse(view: DataView): TypeInst {
@@ -68,11 +70,12 @@ export class U32 extends Numeric {
 }
 
 export interface StructField {
+    name: string;
     ofs?: string;
     type: Type;
 }
 export class Struct implements Type {
-    constructor(readonly name: string, readonly fields: StructField[]) { }
+    constructor(readonly fields: StructField[]) { }
     parse(view: DataView): TypeInst {
         let ofs = 0;
         const insts = [];
@@ -82,14 +85,14 @@ export class Struct implements Type {
                 fofs = 0x80;  // TODO: expression evaluator
             }
             const inst = f.type.parse(new DataView(view.buffer, view.byteOffset + fofs));
-            insts.push(inst);
+            insts.push({ name: f.name, inst });
             ofs += inst.len;
         }
         return new StructInst(this, view.byteOffset, ofs, insts);
     }
 }
 class StructInst implements TypeInst {
-    constructor(readonly type: Struct, readonly ofs: number, readonly len: number, readonly children: TypeInst[]) {
+    constructor(readonly type: Struct, readonly ofs: number, readonly len: number, readonly children: TypeInstChild[]) {
     }
     render(): string {
         return '';
