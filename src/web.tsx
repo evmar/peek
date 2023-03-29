@@ -221,15 +221,20 @@ async function main() {
     const buf = new DataView(data);
 
     const type = new schema.Struct('pe', [
-        new schema.Struct('dos', [
-            new schema.Literal('e_magic', 2),
-            new schema.Literal('e_junk', 0x40 - 4 - 2),
-            new schema.U32('e_lfanew'),
-        ]),
-        new schema.Struct('coff', [
-            new schema.U32('sig'),
-            new schema.U16('machine'),
-        ])
+        {
+            type: new schema.Struct('dos', [
+                { type: new schema.Literal('e_magic', 2) },
+                { type: new schema.Literal('e_junk', 0x40 - 4 - 2) },
+                { type: new schema.U32('e_lfanew') },
+            ])
+        },
+        {
+            ofs: 'root.dos.e_lfanew',
+            type: new schema.Struct('coff', [
+                { type: new schema.U32('sig') },
+                { type: new schema.U16('machine') },
+            ])
+        }
     ]);
     const inst = type.parse(buf);
 

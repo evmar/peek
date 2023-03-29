@@ -67,13 +67,21 @@ export class U32 extends Numeric {
     }
 }
 
+export interface StructField {
+    ofs?: string;
+    type: Type;
+}
 export class Struct implements Type {
-    constructor(readonly name: string, readonly fields: Type[]) { }
+    constructor(readonly name: string, readonly fields: StructField[]) { }
     parse(view: DataView): TypeInst {
         let ofs = 0;
         const insts = [];
         for (const f of this.fields) {
-            const inst = f.parse(new DataView(view.buffer, view.byteOffset + ofs));
+            let fofs = ofs;
+            if (f.ofs) {
+                fofs = 0x80;  // TODO: expression evaluator
+            }
+            const inst = f.type.parse(new DataView(view.buffer, view.byteOffset + fofs));
             insts.push(inst);
             ofs += inst.len;
         }
