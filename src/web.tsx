@@ -1,9 +1,7 @@
 import * as preact from 'preact';
 import { h, Fragment } from 'preact';
-
-function hex(n: number, width = 2): string {
-    return n.toString(16).padStart(width, '0');
-}
+import { hex } from './hex';
+import * as schema from './schema';
 
 function findIndex(node: Element): number {
     let n: Element | null = node.parentNode?.firstElementChild!;
@@ -101,11 +99,55 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
     }
 }
 
+namespace Tree {
+    export interface Props {
+        inst: schema.TypeInst;
+    }
+}
+class Tree extends preact.Component<Tree.Props> {
+    render() {
+        const { inst } = this.props;
+        let children;
+        if (inst.children) {
+            children = <div style={{ paddingLeft: '2ex' }}>
+                {inst.children.map(c => <Tree inst={c} />)}
+            </div>;
+        }
+        return <div>
+            <div><code>{inst.type.name}</code>: {inst.render()}</div>
+            {children}
+        </div>;
+    }
+}
+
+namespace Page {
+    export interface Props {
+        buf: DataView;
+        inst: schema.TypeInst;
+    }
+}
+class Page extends preact.Component<Page.Props> {
+    render() {
+        return <main>
+            <RawView buf={this.props.buf} />
+            <br />
+            <Tree inst={this.props.inst} />
+        </main>;
+    }
+}
+
 async function main() {
     const data = await (await fetch('BASS.DLL')).arrayBuffer();
     const buf = new DataView(data);
 
-    preact.render(<RawView buf={buf} />, document.body);
+    const type = new schema.Struct('dos', [
+        new schema.Literal('e_magic', 2),
+        new schema.Literal('e_junk', 0x40 - 4 - 2),
+        new schema.U32('e_lfanew'),
+    ]);
+    const [inst, _] = type.parse(buf);
+
+    preact.render(<Page buf={buf} inst={inst} />, document.body);
 }
 
 main();
