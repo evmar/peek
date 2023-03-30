@@ -25,7 +25,8 @@ namespace GridView {
 abstract class GridView extends preact.Component<GridView.Props, GridView.State> {
     abstract class: string;
     abstract cell(byte: number): string;
-    ref = preact.createRef<HTMLPreElement>();
+    measureRef = preact.createRef<HTMLPreElement>();
+    gridRef = preact.createRef<HTMLPreElement>();
 
     onMouseEnter = (ev: MouseEvent) => {
         let node = ev.target as Element;
@@ -40,7 +41,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
     componentDidMount() {
         document.fonts.ready.then(() => {
             // Need to wait for fonts to load before measuring character size.
-            const rect = this.ref.current!.getBoundingClientRect();
+            const rect = this.measureRef.current!.getBoundingClientRect();
             this.setState({
                 chWidth: rect.width,
                 chHeight: rect.height,
@@ -50,12 +51,12 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
 
     render(props: GridView.Props): preact.ComponentChild {
         if (!this.state.chWidth) {
-            return <pre ref={this.ref} class={'grid ' + this.class}>0</pre>;
+            return <pre ref={this.gridRef} class='grid'><span ref={this.measureRef} style={{ position: 'relative' }}>0</span></pre>;
         }
 
         const rows = [];
         let index = 0;
-        for (let y = 0; y < 16; y++) {
+        for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
             const row = [];
             for (let x = 0; x < 16; x++) {
                 const b = props.buf.getUint8(index);
@@ -107,7 +108,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
                 <path d={pathops.join(' ')} stroke='red' fill='none' />
             </svg>;
         }
-        return <pre ref={this.ref} class={'grid ' + this.class}>
+        return <pre ref={this.gridRef} class={'grid ' + this.class}>
             {rows}
             {hover}
         </pre>;

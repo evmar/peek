@@ -25,7 +25,6 @@ main {
 
 #raw {
     display: flex;
-    align-items: flex-start;
     padding: 1ex;
 }
 
