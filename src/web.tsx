@@ -86,7 +86,6 @@ namespace GridView {
     export interface Props {
         mode: 'ascii' | 'hex';
         buf: DataView;
-        ofs: number;
         sel?: Selection;
         onHover(sel: Selection | undefined): void;
     }
@@ -95,7 +94,7 @@ namespace GridView {
         chHeight: number;
     }
 }
-abstract class GridView extends preact.Component<GridView.Props, GridView.State> {
+class GridView extends preact.Component<GridView.Props, GridView.State> {
     measureRef = preact.createRef<HTMLPreElement>();
     gridRef = preact.createRef<HTMLPreElement>();
 
@@ -103,7 +102,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         let node = ev.target as Element;
         let x = findIndex(node)!;
         let y = findIndex(node.parentElement!)!;
-        let pos = this.props.ofs + y * 16 + x;
+        let pos = y * 16 + x;
         this.props.onHover({ start: pos, end: pos });
     };
     onMouseLeave = () => {
@@ -129,7 +128,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         }
 
         const rows = [];
-        let index = this.props.ofs;
+        let index = 0;
         const toText = this.props.mode === 'hex' ? hex : toPrintable;
         for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
             const row = [];
@@ -143,19 +142,12 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
 
         let hover;
         if (this.props.sel) {
-            // Ensure selection is within visual bounds.
-            let sel = { ...this.props.sel };
-            sel.start -= this.props.ofs;
-            if (sel.start < 0) sel.start = 0;
-            sel.end -= this.props.ofs;
-            if (sel.end >= 0) {
-                const box = {
-                    width: this.state.chWidth * (this.props.mode === 'hex' ? 2 : 1),
-                    height: this.state.chHeight
-                };
-
-                hover = <HoverBox box={box} spacer={this.props.mode === 'hex' ? this.state.chWidth * 0.5 : 0} sel={sel} />;
-            }
+            const box = {
+                width: this.state.chWidth * (this.props.mode === 'hex' ? 2 : 1),
+                height: this.state.chHeight
+            };
+            const spacer = this.props.mode === 'hex' ? this.state.chWidth * 0.5 : 0
+            hover = <HoverBox box={box} spacer={spacer} sel={this.props.sel} />;
         }
         return <pre ref={this.gridRef} class={'grid ' + this.props.mode}>
             {rows}
@@ -177,21 +169,44 @@ namespace RawView {
 class RawView extends preact.Component<RawView.Props, RawView.State> {
     state: RawView.State = { offsetY: 0 };
 
+    ofs(): number {
+        return Math.floor(this.state.offsetY / 16) * 16;
+    }
+
     onWheel = (ev: WheelEvent) => {
         let offsetY = Math.max(this.state.offsetY + ev.deltaY, 0);
         this.setState({ offsetY });
     }
 
-    render(props: GridView.Props): preact.ComponentChild {
-        let { buf, sel } = this.props;
+    onHover = (sel: Selection | undefined) => {
+        if (sel) {
+            const ofs = this.ofs();
+            sel.start += ofs;
+            sel.end += ofs;
+        }
+        this.props.onHover(sel);
+    }
 
+    render(props: GridView.Props): preact.ComponentChild {
+        let { buf } = this.props;
         const ofs = Math.floor(this.state.offsetY / 16) * 16;
-        buf = new DataView(buf.buffer, buf.byteOffset);
+
+        let sel;
+        if (this.props.sel) {
+            // Ensure selection is within visual bounds.
+            sel = { ...this.props.sel };
+            sel.start -= ofs;
+            if (sel.start < 0) sel.start = 0;
+            sel.end -= ofs;
+            if (sel.end < 0) sel = undefined;
+        }
+
+        buf = new DataView(buf.buffer, buf.byteOffset + ofs);
 
         return <div id='raw' onWheel={this.onWheel}>
-            <GridView mode='hex' buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
+            <GridView mode='hex' buf={buf} sel={sel} onHover={this.onHover} />
             <div style='width: 2ex' />
-            <GridView mode='ascii' buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
+            <GridView mode='ascii' buf={buf} sel={sel} onHover={this.onHover} />
         </div>;
     }
 }
