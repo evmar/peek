@@ -52,7 +52,9 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
 
     render(props: GridView.Props): preact.ComponentChild {
         if (!this.state.chWidth) {
-            return <pre ref={this.gridRef} class='grid'><span ref={this.measureRef} style={{ position: 'relative' }}>0</span></pre>;
+            return <pre ref={this.gridRef} class='grid'>
+                <span ref={this.measureRef} style={{ position: 'relative' }}>0</span>
+            </pre>;
         }
 
         const rows = [];
@@ -71,13 +73,19 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         if (this.props.sel && this.state.chWidth > 0) {
             const letterWidth = this.state.chWidth;
             const letterHeight = this.state.chHeight;
-            const spacerWidth = this.class === 'hex' ? 0.5 * letterWidth : 0;
-            const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
-            const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
             const pad = 1;
             const [sel, selEnd] = this.props.sel;
             const [cx0, cy0] = [sel % 16, Math.floor(sel / 16)];
             const [cx1, cy1] = selEnd ? [(selEnd - 1) % 16, Math.floor((selEnd - 1) / 16)] : [cx0, cy0];
+
+            const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
+            const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
+            const xLeft = (cx: number) => cx * cellSWidth - pad;
+            const xRight = (cx: number) => cx * cellSWidth + cellWidth + pad;
+
+            const yTop = (cy: number) => cy * letterHeight - pad;
+            const yBot = (cy: number) => cy * letterHeight + letterHeight + pad;
+
             // Selection possibly looks like:
             //          start-> +----+
             //              +---+    | <- right wall
@@ -86,24 +94,24 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
             //              +------+ <- end
             const pathops = [
                 // upper left
-                `M${cx0 * cellSWidth - pad} ${cy0 * letterHeight - pad}`
+                `M${xLeft(cx0)} ${yTop(cy0)}`
             ];
             if (cy1 > cy0) {
                 // right wall
-                pathops.push(`L${16 * cellSWidth + pad} ${cy0 * letterHeight - pad}`);
-                pathops.push(`L${16 * cellSWidth + pad} ${cy1 * letterHeight - pad}`);
+                pathops.push(`L${xRight(15)} ${yTop(cy0)}`);
+                pathops.push(`L${xRight(15)} ${yTop(cy1)}`);
             }
             // end upper right
-            pathops.push(`L${cx1 * cellSWidth + cellWidth + pad} ${cy1 * letterHeight - pad}`);
+            pathops.push(`L${xRight(cx1)} ${yTop(cy1)}`);
             // end lower right
-            pathops.push(`L${cx1 * cellSWidth + cellWidth + pad} ${cy1 * letterHeight + letterHeight + pad}`);
+            pathops.push(`L${xRight(cx1)} ${yBot(cy1)}`);
             if (cy1 > cy0) {
                 // left wall
-                pathops.push(`L${-pad} ${cy1 * letterHeight + letterHeight + pad}`);
-                pathops.push(`L${-pad} ${cy0 * letterHeight + letterHeight + pad}`);
+                pathops.push(`L${xLeft(0)} ${yBot(cy1)}`);
+                pathops.push(`L${xLeft(0)} ${yBot(cy0)}`);
             }
             // end lower left
-            pathops.push(`L${cx0 * cellSWidth - pad} ${cy0 * letterHeight + letterHeight + pad}`);
+            pathops.push(`L${xLeft(cx0)} ${yBot(cy0)}`);
             pathops.push(`Z`);
             hover = <svg class='hover-box'>
                 <path d={pathops.join(' ')} stroke='red' fill='none' />
