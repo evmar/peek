@@ -136,10 +136,10 @@ class GridView extends preact.Component<GridView.Props, GridView.State> {
             const row = [];
             for (let x = 0; x < 16; x++) {
                 const b = props.buf.getUint8(index);
-                row.push(<span onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{toText(b)}</span>);
+                row.push(<span key={x} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{toText(b)}</span>);
                 index++;
             }
-            rows.push(<div>{row}</div>);
+            rows.push(<div key={y}>{row}</div>);
         }
 
         let hover;
