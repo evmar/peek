@@ -11,95 +11,37 @@ function findIndex(node: Element): number | undefined {
     }
 }
 
-namespace GridView {
+interface Selection {
+    start: number;
+    end: number;
+}
+
+interface Size {
+    width: number;
+    height: number;
+}
+
+namespace HoverBox {
     export interface Props {
-        buf: DataView;
-        ofs: number;
-        sel?: [number, number];
-        onHover(sel: [number, number] | undefined): void;
-    }
-    export interface State {
-        chWidth: number;
-        chHeight: number;
+        box: Size;
+        spacer: number;
+        sel: Selection;
     }
 }
-abstract class GridView extends preact.Component<GridView.Props, GridView.State> {
-    abstract class: string;
-    abstract cell(byte: number): string;
-    measureRef = preact.createRef<HTMLPreElement>();
-    gridRef = preact.createRef<HTMLPreElement>();
+class HoverBox extends preact.Component<HoverBox.Props> {
+    render(): preact.ComponentChild {
+        const [cx0, cy0] = [this.props.sel.start % 16, Math.floor(this.props.sel.start / 16)];
+        const [cx1, cy1] = [this.props.sel.end % 16, Math.floor(this.props.sel.end / 16)];
 
-    onMouseEnter = (ev: MouseEvent) => {
-        let node = ev.target as Element;
-        let x = findIndex(node)!;
-        let y = findIndex(node.parentElement!)!;
-        let pos = this.props.ofs + y * 16 + x;
-        this.props.onHover([pos, pos + 1]);
-    };
-    onMouseLeave = () => {
-        this.props.onHover(undefined);
-    };
-
-    componentDidMount() {
-        document.fonts.ready.then(() => {
-            // Need to wait for fonts to load before measuring character size.
-            const rect = this.measureRef.current!.getBoundingClientRect();
-            this.setState({
-                chWidth: rect.width,
-                chHeight: rect.height,
-            });
-        });
-    }
-
-    render(props: GridView.Props): preact.ComponentChild {
-        if (!this.state.chWidth) {
-            return <pre ref={this.gridRef} class='grid'>
-                <span ref={this.measureRef} style={{ position: 'relative' }}>0</span>
-            </pre>;
-        }
-
-        const rows = [];
-        let index = this.props.ofs;
-        for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
-            const row = [];
-            for (let x = 0; x < 16; x++) {
-                const b = props.buf.getUint8(index);
-                row.push(<span onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{this.cell(b)}</span>);
-                index++;
-            }
-            rows.push(<div>{row}</div>);
-        }
-
-        return <pre ref={this.gridRef} class={'grid ' + this.class}>
-            {rows}
-            {this.renderHover()}
-        </pre>;
-    }
-
-    private renderHover(): preact.ComponentChild | undefined {
-        if (!this.props.sel) return;
-
-        // Ensure selection is within visual bounds.
-        let [sel, selEnd] = this.props.sel;
-        selEnd = selEnd ? selEnd - 1 : sel;
-        sel -= this.props.ofs;
-        if (sel < 0) sel = 0;
-        selEnd -= this.props.ofs;
-        if (selEnd < 0) return;
-
-        const [cx0, cy0] = [sel % 16, Math.floor(sel / 16)];
-        const [cx1, cy1] = [selEnd % 16, Math.floor(selEnd / 16)];
-
-        const letterWidth = this.state.chWidth;
-        const letterHeight = this.state.chHeight;
-        const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
-        const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
+        const cellSWidth = this.props.box.width + this.props.spacer;
+        const cellWidth = this.props.box.width;
+        const cellHeight = this.props.box.height;
         const pad = 1;
         const xLeft = (cx: number) => cx * cellSWidth - pad;
         const xRight = (cx: number) => cx * cellSWidth + cellWidth + pad;
 
-        const yTop = (cy: number) => cy * letterHeight - pad;
-        const yBot = (cy: number) => cy * letterHeight + letterHeight + pad;
+        const yTop = (cy: number) => cy * cellHeight - pad;
+        const yBot = (cy: number) => cy * cellHeight + cellHeight + pad;
 
         // Selection possibly looks like:
         //          start-> +----+
@@ -134,27 +76,99 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
     }
 }
 
-class HexView extends GridView {
-    class = 'hex';
-    cell(byte: number): string {
-        return hex(byte);
-    }
+function toPrintable(byte: number): string {
+    if (isPrintable(byte))
+        return String.fromCharCode(byte);
+    return '.';
 }
 
-class ASCIIView extends GridView {
-    class = 'ascii';
-    cell(byte: number): string {
-        if (isPrintable(byte))
-            return String.fromCharCode(byte);
-        return '.';
+namespace GridView {
+    export interface Props {
+        mode: 'ascii' | 'hex';
+        buf: DataView;
+        ofs: number;
+        sel?: Selection;
+        onHover(sel: Selection | undefined): void;
+    }
+    export interface State {
+        chWidth: number;
+        chHeight: number;
+    }
+}
+abstract class GridView extends preact.Component<GridView.Props, GridView.State> {
+    measureRef = preact.createRef<HTMLPreElement>();
+    gridRef = preact.createRef<HTMLPreElement>();
+
+    onMouseEnter = (ev: MouseEvent) => {
+        let node = ev.target as Element;
+        let x = findIndex(node)!;
+        let y = findIndex(node.parentElement!)!;
+        let pos = this.props.ofs + y * 16 + x;
+        this.props.onHover({ start: pos, end: pos });
+    };
+    onMouseLeave = () => {
+        this.props.onHover(undefined);
+    };
+
+    componentDidMount() {
+        document.fonts.ready.then(() => {
+            // Need to wait for fonts to load before measuring character size.
+            const rect = this.measureRef.current!.getBoundingClientRect();
+            this.setState({
+                chWidth: rect.width,
+                chHeight: rect.height,
+            });
+        });
+    }
+
+    render(props: GridView.Props): preact.ComponentChild {
+        if (!this.state.chWidth) {
+            return <pre ref={this.gridRef} class='grid'>
+                <span ref={this.measureRef} style={{ position: 'relative' }}>0</span>
+            </pre>;
+        }
+
+        const rows = [];
+        let index = this.props.ofs;
+        const toText = this.props.mode === 'hex' ? hex : toPrintable;
+        for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
+            const row = [];
+            for (let x = 0; x < 16; x++) {
+                const b = props.buf.getUint8(index);
+                row.push(<span onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{toText(b)}</span>);
+                index++;
+            }
+            rows.push(<div>{row}</div>);
+        }
+
+        let hover;
+        if (this.props.sel) {
+            // Ensure selection is within visual bounds.
+            let sel = { ...this.props.sel };
+            sel.start -= this.props.ofs;
+            if (sel.start < 0) sel.start = 0;
+            sel.end -= this.props.ofs;
+            if (sel.end >= 0) {
+                const box = {
+                    width: this.state.chWidth * (this.props.mode === 'hex' ? 2 : 1),
+                    height: this.state.chHeight
+                };
+
+                hover = <HoverBox box={box} spacer={this.props.mode === 'hex' ? this.state.chWidth * 0.5 : 0} sel={sel} />;
+            }
+        }
+        return <pre ref={this.gridRef} class={'grid ' + this.props.mode}>
+            {rows}
+            {hover}
+        </pre>;
     }
 }
 
 namespace RawView {
     export interface Props {
         buf: DataView;
-        onHover(sel: [number, number] | undefined): void;
-        sel?: [number, number];
+        onHover(sel: Selection | undefined): void;
+        sel?: Selection;
     }
     export interface State {
         offsetY: number;
@@ -175,9 +189,9 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
         buf = new DataView(buf.buffer, buf.byteOffset);
 
         return <div id='raw' onWheel={this.onWheel}>
-            <HexView buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
+            <GridView mode='hex' buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
             <div style='width: 2ex' />
-            <ASCIIView buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
+            <GridView mode='ascii' buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
         </div>;
     }
 }
@@ -186,13 +200,13 @@ namespace TreeNode {
     export interface Props {
         name?: string;
         inst: schema.TypeInst;
-        onHover(sel: [number, number?] | undefined): void;
+        onHover(sel: Selection | undefined): void;
     }
 }
 class TreeNode extends preact.Component<TreeNode.Props> {
     onMouseEnter = () => {
         const { inst } = this.props;
-        this.props.onHover([inst.ofs, inst.ofs + inst.len]);
+        this.props.onHover({ start: inst.ofs, end: inst.ofs + inst.len - 1 });
     };
     onMouseLeave = () => {
         this.props.onHover(undefined);
@@ -220,11 +234,11 @@ namespace Page {
         inst: schema.TypeInst;
     }
     export interface State {
-        sel?: [number, number];
+        sel?: Selection;
     }
 }
 class Page extends preact.Component<Page.Props, Page.State> {
-    onHover = (sel: [number, number] | undefined) => {
+    onHover = (sel: Selection | undefined) => {
         this.setState({ sel });
     };
 
