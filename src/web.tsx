@@ -161,44 +161,40 @@ namespace RawView {
     }
     export interface State {
         offsetY: number;
+        ofs: number;
     }
 }
 class RawView extends preact.Component<RawView.Props, RawView.State> {
-    state: RawView.State = { offsetY: 0 };
-
-    ofs(): number {
-        return Math.floor(this.state.offsetY / 16) * 16;
-    }
+    state: RawView.State = { offsetY: 0, ofs: 0 };
 
     onWheel = (ev: WheelEvent) => {
-        let offsetY = Math.max(this.state.offsetY + ev.deltaY, 0);
-        this.setState({ offsetY });
+        const offsetY = Math.max(this.state.offsetY + ev.deltaY, 0);
+        const ofs = Math.floor(offsetY / 16) * 16;
+        this.setState({ offsetY, ofs });
     }
 
     onHover = (sel: Selection | undefined) => {
         if (sel) {
-            const ofs = this.ofs();
-            sel.start += ofs;
-            sel.end += ofs;
+            sel.start += this.state.ofs;
+            sel.end += this.state.ofs;
         }
         this.props.onHover(sel);
     }
 
     render(props: GridView.Props): preact.ComponentChild {
         let { buf } = this.props;
-        const ofs = Math.floor(this.state.offsetY / 16) * 16;
 
         let sel;
         if (this.props.sel) {
             // Ensure selection is within visual bounds.
             sel = { ...this.props.sel };
-            sel.start -= ofs;
+            sel.start -= this.state.ofs;
             if (sel.start < 0) sel.start = 0;
-            sel.end -= ofs;
+            sel.end -= this.state.ofs;
             if (sel.end < 0) sel = undefined;
         }
 
-        buf = new DataView(buf.buffer, buf.byteOffset + ofs);
+        buf = new DataView(buf.buffer, buf.byteOffset + this.state.ofs);
 
         return <div id='raw' onWheel={this.onWheel}>
             <GridView mode='hex' buf={buf} sel={sel} onHover={this.onHover} />
