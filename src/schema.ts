@@ -133,13 +133,14 @@ class StructInst implements TypeInst {
 }
 
 export class List implements Type {
-    constructor(readonly inner: Type, readonly count: number) { }
+    constructor(readonly inner: Type, readonly count: number, readonly extra?: { names?: string[] }) { }
     parse(view: DataView): TypeInst {
         let ofs = 0;
         let insts = [];
         for (let i = 0; i < this.count; i++) {
             const inst = this.inner.parse(new DataView(view.buffer, view.byteOffset + ofs));
-            insts.push({ inst });
+            const name = this.extra?.names?.[i];
+            insts.push({ name, inst });
             ofs += inst.len;
         }
         return new ListInst(this, view.byteOffset, insts);

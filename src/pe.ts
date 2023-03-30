@@ -66,11 +66,30 @@ const IMAGE_SECTION_HEADER = new schema.Struct([
     { name: 'Characteristics', type: new schema.U32() },
 ]);
 
+const dataDirectoryNames = [
+    'export',
+    'import',
+    'resource',
+    'exception',
+    'certificate',
+    'base relocation',
+    'debug',
+    'architecture',
+    'global ptr',
+    'tls',
+    'load config',
+    'bound import',
+    'iat',
+    'delay import descriptor',
+    'clr runtime header',
+    'reserved',
+];
+
 const IMAGE_NT_HEADERS32 = new schema.Struct([
     { name: 'Signature', type: new schema.Literal(4, true) },
     { name: 'FileHeader', type: IMAGE_FILE_HEADER },
     { name: 'OptionalHeader', type: IMAGE_OPTIONAL_HEADER },
-    { name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY, 0x10) },
+    { name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY, 0x10, { names: dataDirectoryNames }) },
     { name: 'Sections', type: new schema.List(IMAGE_SECTION_HEADER, 2) },
 ]);
 
