@@ -53,13 +53,26 @@ const IMAGE_OPTIONAL_HEADER = new schema.Struct([
     { name: 'NumberOfRvaAndSizes', type: new schema.U32() },
 ]);
 
+const IMAGE_SECTION_HEADER = new schema.Struct([
+    { name: 'Name', type: new schema.Literal(8, true) },
+    { name: 'VirtualSize', type: new schema.U32() },
+    { name: 'VirtualAddress', type: new schema.U32() },
+    { name: 'SizeOfRawData', type: new schema.U32() },
+    { name: 'PointerToRawData', type: new schema.U32() },
+    { name: 'PointerToRelocations', type: new schema.U32() },
+    { name: 'PointerToLinenumbers', type: new schema.U32() },
+    { name: 'NumberOfRelocations', type: new schema.U16() },
+    { name: 'NumberOfLinenumbers', type: new schema.U16() },
+    { name: 'Characteristics', type: new schema.U32() },
+]);
+
 const IMAGE_NT_HEADERS32 = new schema.Struct([
     { name: 'Signature', type: new schema.Literal(4, true) },
     { name: 'FileHeader', type: IMAGE_FILE_HEADER },
     { name: 'OptionalHeader', type: IMAGE_OPTIONAL_HEADER },
     { name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY, 0x10) },
+    { name: 'Sections', type: new schema.List(IMAGE_SECTION_HEADER, 2) },
 ]);
-
 
 export const type = new schema.Struct([
     {
