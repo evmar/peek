@@ -1,4 +1,5 @@
 import { hex, isPrintable } from "./hex";
+import * as expr from './expr';
 
 export interface Type {
     parse(view: DataView): TypeInst;
@@ -13,7 +14,8 @@ export interface TypeInst {
     ofs: number;
     len: number;
     render(): string;
-    children?: Array<TypeInstChild>;
+    children?: TypeInstChild[];
+    eval(): unknown;
 }
 
 export class Literal implements Type {
@@ -51,6 +53,7 @@ class LiteralInst implements TypeInst {
         if (this.type.text) str = `'${str}'`;
         return str;
     }
+    eval(): unknown { throw new Error('todo') }
 }
 
 abstract class Numeric implements Type {
@@ -67,6 +70,7 @@ class NumericInst implements TypeInst {
     render(): string {
         return '0x' + hex(this.value, 0);
     }
+    eval(): unknown { return this.value; }
 }
 
 export class U16 extends Numeric {
@@ -88,6 +92,7 @@ export class NumEnum implements Type {
     parse(view: DataView): TypeInst {
         return new NumEnumInst(this, this.num.parse(view));
     }
+    eval(): unknown { throw new Error('todo') }
 }
 export class NumEnumInst implements TypeInst {
     ofs = this.num.ofs;
@@ -100,6 +105,7 @@ export class NumEnumInst implements TypeInst {
         }
         return this.num.render();
     }
+    eval(): unknown { throw new Error('todo') }
 }
 
 export interface StructField {
@@ -109,27 +115,32 @@ export interface StructField {
 }
 export class Struct implements Type {
     constructor(readonly fields: StructField[]) { }
-    parse(view: DataView): TypeInst {
-        let ofs = 0;
-        const insts = [];
+    parse(view: DataView, root?: TypeInst): TypeInst {
+        const struct = new StructInst(this, view.byteOffset);
+        if (!root) root = struct;
         for (const f of this.fields) {
-            let fofs = ofs;
+            let fofs = struct.len;
             if (f.ofs) {
-                fofs = 0x80;  // TODO: expression evaluator
+                const exp = expr.parse(f.ofs);
+                const v = exp.evaluate({ root }).eval();
+                if (typeof v !== 'number') throw new Error('todo');
+                fofs = v;
             }
             const inst = f.type.parse(new DataView(view.buffer, view.byteOffset + fofs));
-            insts.push({ name: f.name, inst });
-            ofs += inst.len;
+            struct.children.push({ name: f.name, inst });
+            struct.len += inst.len;
         }
-        return new StructInst(this, view.byteOffset, ofs, insts);
+        return struct;
     }
 }
 class StructInst implements TypeInst {
-    constructor(readonly type: Struct, readonly ofs: number, readonly len: number, readonly children: TypeInstChild[]) {
-    }
+    len = 0;
+    children: TypeInstChild[] = [];
+    constructor(readonly type: Struct, readonly ofs: number) { }
     render(): string {
         return '';
     }
+    eval(): unknown { throw new Error('todo') }
 }
 
 export class List implements Type {
@@ -152,4 +163,5 @@ class ListInst implements TypeInst {
     render(): string {
         return `${this.children.length} entries`;
     }
+    eval(): unknown { throw new Error('todo') }
 }
