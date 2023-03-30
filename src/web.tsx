@@ -100,7 +100,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
             if (cy1 > cy0) {
                 // left wall
                 pathops.push(`L${-pad} ${cy1 * letterHeight + letterHeight + pad}`);
-                pathops.push(`L${-pad} ${+pad + cy0 * letterHeight + letterHeight}`);
+                pathops.push(`L${-pad} ${cy0 * letterHeight + letterHeight + pad}`);
             }
             // end lower left
             pathops.push(`L${cx0 * cellSWidth - pad} ${cy0 * letterHeight + letterHeight + pad}`);
