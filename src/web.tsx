@@ -4,12 +4,11 @@ import { hex, isPrintable } from './hex';
 import * as schema from './schema';
 import * as pe from './pe';
 
-function findIndex(node: Element): number {
+function findIndex(node: Element): number | undefined {
     let n: Element | null = node.parentNode?.firstElementChild!;
-    for (let i = 0; i < 16; i++, n = n!.nextElementSibling) {
+    for (let i = 0; n; i++, n = n!.nextElementSibling) {
         if (n === node) return i;
     }
-    return -1;
 }
 
 namespace GridView {
@@ -17,7 +16,7 @@ namespace GridView {
         buf: DataView;
         ofs: number;
         sel?: [number, number];
-        onHover(sel: [number, number?] | undefined): void;
+        onHover(sel: [number, number] | undefined): void;
     }
     export interface State {
         chWidth: number;
@@ -32,9 +31,10 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
 
     onMouseEnter = (ev: MouseEvent) => {
         let node = ev.target as Element;
-        let x = findIndex(node);
-        let y = findIndex(node.parentElement!);
-        this.props.onHover([y * 16 + x]);
+        let x = findIndex(node)!;
+        let y = findIndex(node.parentElement!)!;
+        let pos = this.props.ofs + y * 16 + x;
+        this.props.onHover([pos, pos + 1]);
     };
     onMouseLeave = () => {
         this.props.onHover(undefined);
