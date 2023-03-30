@@ -20,6 +20,22 @@ const IMAGE_FILE_HEADER = new schema.Struct([
     { name: 'Characteristics', type: new schema.U16() },
 ]);
 
+const subsystem = new schema.NumEnum(new schema.U16(), {
+    0: 'IMAGE_SUBSYSTEM_UNKNOWN',
+    1: 'IMAGE_SUBSYSTEM_NATIVE',
+    2: 'IMAGE_SUBSYSTEM_WINDOWS_GUI',
+    3: 'IMAGE_SUBSYSTEM_WINDOWS_CUI',
+    5: 'IMAGE_SUBSYSTEM_OS2_CUI',
+    7: 'IMAGE_SUBSYSTEM_POSIX_CUI',
+    8: 'IMAGE_SUBSYSTEM_NATIVE_WINDOWS',
+    9: 'IMAGE_SUBSYSTEM_WINDOWS_CE_GUI',
+    10: 'IMAGE_SUBSYSTEM_EFI_APPLICATION',
+    11: 'IMAGE_SUBSYSTEM_EFI_BOOT_ SERVICE_DRIVER',
+    12: 'IMAGE_SUBSYSTEM_EFI_RUNTIME_ DRIVER',
+    13: 'IMAGE_SUBSYSTEM_EFI_ROM',
+    14: 'IMAGE_SUBSYSTEM_XBOX',
+    16: 'IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION',
+});
 
 const IMAGE_OPTIONAL_HEADER = new schema.Struct([
     { name: 'Magic', type: new schema.U16() },
@@ -43,7 +59,7 @@ const IMAGE_OPTIONAL_HEADER = new schema.Struct([
     { name: 'SizeOfImage', type: new schema.U32() },
     { name: 'SizeOfHeaders', type: new schema.U32() },
     { name: 'CheckSum', type: new schema.U32() },
-    { name: 'Subsystem', type: new schema.U16() },
+    { name: 'Subsystem', type: subsystem },
     { name: 'DllCharacteristics', type: new schema.U16() },
     { name: 'SizeOfStackReserve', type: new schema.U32() },
     { name: 'SizeOfStackCommit', type: new schema.U32() },
