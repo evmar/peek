@@ -15,7 +15,8 @@ function findIndex(node: Element): number {
 namespace GridView {
     export interface Props {
         buf: DataView;
-        sel?: [number, number?];
+        ofs: number;
+        sel?: [number, number];
         onHover(sel: [number, number?] | undefined): void;
     }
     export interface State {
@@ -58,7 +59,7 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
         }
 
         const rows = [];
-        let index = 0;
+        let index = this.props.ofs;
         for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
             const row = [];
             for (let x = 0; x < 16; x++) {
@@ -69,58 +70,67 @@ abstract class GridView extends preact.Component<GridView.Props, GridView.State>
             rows.push(<div>{row}</div>);
         }
 
-        let hover;
-        if (this.props.sel && this.state.chWidth > 0) {
-            const letterWidth = this.state.chWidth;
-            const letterHeight = this.state.chHeight;
-            const pad = 1;
-            const [sel, selEnd] = this.props.sel;
-            const [cx0, cy0] = [sel % 16, Math.floor(sel / 16)];
-            const [cx1, cy1] = selEnd ? [(selEnd - 1) % 16, Math.floor((selEnd - 1) / 16)] : [cx0, cy0];
-
-            const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
-            const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
-            const xLeft = (cx: number) => cx * cellSWidth - pad;
-            const xRight = (cx: number) => cx * cellSWidth + cellWidth + pad;
-
-            const yTop = (cy: number) => cy * letterHeight - pad;
-            const yBot = (cy: number) => cy * letterHeight + letterHeight + pad;
-
-            // Selection possibly looks like:
-            //          start-> +----+
-            //              +---+    | <- right wall
-            // left wall -> |        |
-            //              |      +-+
-            //              +------+ <- end
-            const pathops = [
-                // upper left
-                `M${xLeft(cx0)} ${yTop(cy0)}`
-            ];
-            if (cy1 > cy0) {
-                // right wall
-                pathops.push(`L${xRight(15)} ${yTop(cy0)}`);
-                pathops.push(`L${xRight(15)} ${yTop(cy1)}`);
-            }
-            // end upper right
-            pathops.push(`L${xRight(cx1)} ${yTop(cy1)}`);
-            // end lower right
-            pathops.push(`L${xRight(cx1)} ${yBot(cy1)}`);
-            if (cy1 > cy0) {
-                // left wall
-                pathops.push(`L${xLeft(0)} ${yBot(cy1)}`);
-                pathops.push(`L${xLeft(0)} ${yBot(cy0)}`);
-            }
-            // end lower left
-            pathops.push(`L${xLeft(cx0)} ${yBot(cy0)}`);
-            pathops.push(`Z`);
-            hover = <svg class='hover-box'>
-                <path d={pathops.join(' ')} stroke='red' fill='none' />
-            </svg>;
-        }
         return <pre ref={this.gridRef} class={'grid ' + this.class}>
             {rows}
-            {hover}
+            {this.renderHover()}
         </pre>;
+    }
+
+    private renderHover(): preact.ComponentChild | undefined {
+        if (!this.props.sel) return;
+
+        // Ensure selection is within visual bounds.
+        let [sel, selEnd] = this.props.sel;
+        selEnd = selEnd ? selEnd - 1 : sel;
+        sel -= this.props.ofs;
+        if (sel < 0) sel = 0;
+        selEnd -= this.props.ofs;
+        if (selEnd < 0) return;
+
+        const [cx0, cy0] = [sel % 16, Math.floor(sel / 16)];
+        const [cx1, cy1] = [selEnd % 16, Math.floor(selEnd / 16)];
+
+        const letterWidth = this.state.chWidth;
+        const letterHeight = this.state.chHeight;
+        const cellSWidth = this.class === 'hex' ? 2.5 * letterWidth : letterWidth;
+        const cellWidth = this.class === 'hex' ? 2 * letterWidth : letterWidth;
+        const pad = 1;
+        const xLeft = (cx: number) => cx * cellSWidth - pad;
+        const xRight = (cx: number) => cx * cellSWidth + cellWidth + pad;
+
+        const yTop = (cy: number) => cy * letterHeight - pad;
+        const yBot = (cy: number) => cy * letterHeight + letterHeight + pad;
+
+        // Selection possibly looks like:
+        //          start-> +----+
+        //              +---+    | <- right wall
+        // left wall -> |        |
+        //              |      +-+
+        //              +------+ <- end
+        const pathops = [
+            // upper left
+            `M${xLeft(cx0)} ${yTop(cy0)}`
+        ];
+        if (cy1 > cy0) {
+            // right wall
+            pathops.push(`L${xRight(15)} ${yTop(cy0)}`);
+            pathops.push(`L${xRight(15)} ${yTop(cy1)}`);
+        }
+        // end upper right
+        pathops.push(`L${xRight(cx1)} ${yTop(cy1)}`);
+        // end lower right
+        pathops.push(`L${xRight(cx1)} ${yBot(cy1)}`);
+        if (cy1 > cy0) {
+            // left wall
+            pathops.push(`L${xLeft(0)} ${yBot(cy1)}`);
+            pathops.push(`L${xLeft(0)} ${yBot(cy0)}`);
+        }
+        // end lower left
+        pathops.push(`L${xLeft(cx0)} ${yBot(cy0)}`);
+        pathops.push(`Z`);
+        return <svg class='hover-box'>
+            <path d={pathops.join(' ')} stroke='red' fill='none' />
+        </svg>;
     }
 }
 
@@ -143,8 +153,8 @@ class ASCIIView extends GridView {
 namespace RawView {
     export interface Props {
         buf: DataView;
-        onHover(sel: [number, number?] | undefined): void;
-        sel?: [number, number?];
+        onHover(sel: [number, number] | undefined): void;
+        sel?: [number, number];
     }
     export interface State {
         offsetY: number;
@@ -159,15 +169,15 @@ class RawView extends preact.Component<RawView.Props, RawView.State> {
     }
 
     render(props: GridView.Props): preact.ComponentChild {
-        let { buf } = this.props;
+        let { buf, sel } = this.props;
 
         const ofs = Math.floor(this.state.offsetY / 16) * 16;
-        buf = new DataView(buf.buffer, buf.byteOffset + ofs);
+        buf = new DataView(buf.buffer, buf.byteOffset);
 
         return <div id='raw' onWheel={this.onWheel}>
-            <HexView buf={buf} sel={this.props.sel} onHover={this.props.onHover} />
+            <HexView buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
             <div style='width: 2ex' />
-            <ASCIIView buf={buf} sel={this.props.sel} onHover={this.props.onHover} />
+            <ASCIIView buf={buf} ofs={ofs} sel={sel} onHover={this.props.onHover} />
         </div>;
     }
 }
@@ -210,11 +220,11 @@ namespace Page {
         inst: schema.TypeInst;
     }
     export interface State {
-        sel?: [number, number?];
+        sel?: [number, number];
     }
 }
 class Page extends preact.Component<Page.Props, Page.State> {
-    onHover = (sel: [number, number?] | undefined) => {
+    onHover = (sel: [number, number] | undefined) => {
         this.setState({ sel });
     };
 
