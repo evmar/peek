@@ -16,15 +16,15 @@ interface Selection {
     end: number;
 }
 
-interface Size {
+interface CellSize {
     width: number;
     height: number;
+    spacer: number;
 }
 
 namespace HoverBox {
     export interface Props {
-        box: Size;
-        spacer: number;
+        cell: CellSize;
         sel: Selection;
     }
 }
@@ -33,9 +33,9 @@ class HoverBox extends preact.Component<HoverBox.Props> {
         const [cx0, cy0] = [this.props.sel.start % 16, Math.floor(this.props.sel.start / 16)];
         const [cx1, cy1] = [this.props.sel.end % 16, Math.floor(this.props.sel.end / 16)];
 
-        const cellSWidth = this.props.box.width + this.props.spacer;
-        const cellWidth = this.props.box.width;
-        const cellHeight = this.props.box.height;
+        const cellSWidth = this.props.cell.width + this.props.cell.spacer;
+        const cellWidth = this.props.cell.width;
+        const cellHeight = this.props.cell.height;
         const pad = 1;
         const xLeft = (cx: number) => cx * cellSWidth - pad;
         const xRight = (cx: number) => cx * cellSWidth + cellWidth + pad;
@@ -90,8 +90,7 @@ namespace GridView {
         onHover(sel: Selection | undefined): void;
     }
     export interface State {
-        chWidth: number;
-        chHeight: number;
+        cell?: CellSize;
     }
 }
 class GridView extends preact.Component<GridView.Props, GridView.State> {
@@ -114,14 +113,17 @@ class GridView extends preact.Component<GridView.Props, GridView.State> {
             // Need to wait for fonts to load before measuring character size.
             const rect = this.measureRef.current!.getBoundingClientRect();
             this.setState({
-                chWidth: rect.width,
-                chHeight: rect.height,
+                cell: {
+                    width: rect.width * (this.props.mode === 'hex' ? 2 : 1),
+                    height: rect.height,
+                    spacer: this.props.mode === 'hex' ? rect.width * 0.5 : 0,
+                },
             });
         });
     }
 
     render(props: GridView.Props): preact.ComponentChild {
-        if (!this.state.chWidth) {
+        if (!this.state.cell) {
             return <pre ref={this.gridRef} class='grid'>
                 <span ref={this.measureRef} style={{ position: 'relative' }}>0</span>
             </pre>;
@@ -130,7 +132,7 @@ class GridView extends preact.Component<GridView.Props, GridView.State> {
         const rows = [];
         let index = 0;
         const toText = this.props.mode === 'hex' ? hex : toPrintable;
-        for (let y = 0; (y + 1) * this.state.chHeight < this.gridRef.current!.offsetHeight; y++) {
+        for (let y = 0; (y + 1) * this.state.cell.height < this.gridRef.current!.offsetHeight; y++) {
             const row = [];
             for (let x = 0; x < 16; x++) {
                 const b = props.buf.getUint8(index);
@@ -142,12 +144,7 @@ class GridView extends preact.Component<GridView.Props, GridView.State> {
 
         let hover;
         if (this.props.sel) {
-            const box = {
-                width: this.state.chWidth * (this.props.mode === 'hex' ? 2 : 1),
-                height: this.state.chHeight
-            };
-            const spacer = this.props.mode === 'hex' ? this.state.chWidth * 0.5 : 0
-            hover = <HoverBox box={box} spacer={spacer} sel={this.props.sel} />;
+            hover = <HoverBox cell={this.state.cell} sel={this.props.sel} />;
         }
         return <pre ref={this.gridRef} class={'grid ' + this.props.mode}>
             {rows}
