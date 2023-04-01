@@ -266,7 +266,9 @@ async function main() {
     const data = await (await fetch(exe)).arrayBuffer();
     const buf = new DataView(data);
 
-    const inst = pe.type.parse(buf);
+    const partial = { inst: null! };
+    pe.type.parse(buf, partial);
+    const inst = partial.inst;
 
     preact.render(<Page buf={buf} inst={inst} />, document.body);
 }

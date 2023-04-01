@@ -105,7 +105,11 @@ const IMAGE_NT_HEADERS32 = new schema.Struct([
     { name: 'Signature', type: new schema.Literal(4, true) },
     { name: 'FileHeader', type: IMAGE_FILE_HEADER },
     { name: 'OptionalHeader', type: IMAGE_OPTIONAL_HEADER },
-    { name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY, 0x10, { names: dataDirectoryNames }) },
+    {
+        name: 'DataDirectories', type: new schema.List(IMAGE_DATA_DIRECTORY,
+            'root.IMAGE_NT_HEADERS32.OptionalHeader.NumberOfRvaAndSizes',
+            { names: dataDirectoryNames })
+    },
     { name: 'Sections', type: new schema.List(IMAGE_SECTION_HEADER, 2) },
 ]);
 

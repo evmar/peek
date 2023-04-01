@@ -32,7 +32,7 @@ class ExprField implements Expr {
                 return c.inst;
             }
         }
-        todo('field not found');
+        todo(`field ${this.field} not found`);
     }
     sexp() {
         return `(${this.expr.sexp()} .${this.field})`;
@@ -56,5 +56,6 @@ export function parse(text: string): Expr {
     if (re.lastIndex < text.length) {
         todo("didn't parse full text");
     }
+    console.log(expr.sexp());
     return expr;
 }
