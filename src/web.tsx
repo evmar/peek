@@ -262,7 +262,8 @@ class Page extends preact.Component<Page.Props, Page.State> {
 }
 
 async function main() {
-    const data = await (await fetch('BASS.DLL')).arrayBuffer();
+    const exe = window.location.search.substring(1);
+    const data = await (await fetch(exe)).arrayBuffer();
     const buf = new DataView(data);
 
     const inst = pe.type.parse(buf);
