@@ -263,6 +263,7 @@ class Page extends preact.Component<Page.Props, Page.State> {
 
 async function main() {
     const exe = window.location.search.substring(1);
+    if (!exe) throw new Error('expected file query param');
     const data = await (await fetch(exe)).arrayBuffer();
     const buf = new DataView(data);
 
