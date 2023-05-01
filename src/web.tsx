@@ -227,9 +227,13 @@ class TreeNode extends preact.Component<TreeNode.Props> {
                 {inst.children.map(({ name, inst }) => <TreeNode name={name} inst={inst} onHover={this.props.onHover} />)}
             </div>;
         }
+        let value = inst.render();
+        if (value) {
+            value = `: ${value}`;
+        }
         return <div>
             <div onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
-                <code>{this.props.name ? this.props.name + ': ' : '-'}{inst.render()}</code>
+                <code>{this.props.name ?? '-'}{value}</code>
             </div>
             {children}
         </div>;
