@@ -18,6 +18,15 @@ export interface TypeInst {
     eval(): number;
 }
 
+/** Before an instantation completes we use a placeholder, which appears on parse failure. */
+class Placeholder implements TypeInst {
+    type = null!;
+    len = 0;
+    constructor(readonly ofs: number) { }
+    render() { return '<incomplete>'; }
+    eval() { return 0; }
+}
+
 export class Literal implements Type {
     constructor(readonly expected: number, readonly text: boolean) { }
     parse(view: DataView, partial: TypeInstChild): void {
@@ -90,7 +99,7 @@ export class U32 extends Numeric {
 export class NumEnum implements Type {
     constructor(readonly num: Numeric, readonly values: { [num: number]: string }) { }
     parse(view: DataView, partial: TypeInstChild): void {
-        const t: TypeInstChild = { inst: null! };
+        const t: TypeInstChild = { inst: new Placeholder(view.byteOffset) };
         this.num.parse(view, partial);
         partial.inst = new NumEnumInst(this, partial.inst as NumericInst);
     }
@@ -126,7 +135,7 @@ export class Struct implements Type {
             if (f.ofs) {
                 fofs = expr.parse(f.ofs).evaluate({ root }).eval();
             }
-            const partial: TypeInstChild = { name: f.name, inst: null! };
+            const partial: TypeInstChild = { name: f.name, inst: new Placeholder(view.byteOffset + fofs) };
             struct.children.push(partial);
             f.type.parse(new DataView(view.buffer, view.byteOffset + fofs), partial, root);
             struct.len += partial.inst.len;
@@ -158,7 +167,7 @@ export class List implements Type {
         partial.inst = list;
         for (let i = 0; i < count; i++) {
             const name = this.extra?.names?.[i];
-            const partial: TypeInstChild = { name, inst: null! };
+            const partial: TypeInstChild = { name, inst: new Placeholder(view.byteOffset + ofs) };
             list.children.push(partial);
             this.inner.parse(new DataView(view.buffer, view.byteOffset + ofs), partial);
             ofs += partial.inst.len;

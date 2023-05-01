@@ -135,6 +135,7 @@ class GridView extends preact.Component<GridView.Props, GridView.State> {
         for (let y = 0; (y + 1) * this.state.cell.height < this.gridRef.current!.offsetHeight; y++) {
             const row = [];
             for (let x = 0; x < 16; x++) {
+                if (index >= props.buf.byteLength) break;
                 const b = props.buf.getUint8(index);
                 row.push(<span key={x} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>{toText(b)}</span>);
                 index++;
@@ -272,7 +273,11 @@ async function main() {
     const buf = new DataView(data);
 
     const partial = { inst: null! };
-    pe.type.parse(buf, partial);
+    try {
+        pe.type.parse(buf, partial);
+    } catch (e: unknown) {
+        console.error(e);
+    }
     const inst = partial.inst;
 
     preact.render(<Page buf={buf} inst={inst} />, document.body);
