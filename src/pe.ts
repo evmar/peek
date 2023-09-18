@@ -110,7 +110,10 @@ const IMAGE_NT_HEADERS32 = new schema.Struct([
             'root.IMAGE_NT_HEADERS32.OptionalHeader.NumberOfRvaAndSizes',
             { names: dataDirectoryNames })
     },
-    { name: 'Sections', type: new schema.List(IMAGE_SECTION_HEADER, 2) },
+    {
+        name: 'Sections', type: new schema.List(IMAGE_SECTION_HEADER,
+            'root.IMAGE_NT_HEADERS32.FileHeader.NumberOfSections')
+    },
 ]);
 
 export const type = new schema.Struct([
