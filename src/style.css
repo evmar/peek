@@ -50,5 +50,9 @@ main {
 #tree {
     padding: 1ex;
     overflow-y: auto;
+}
+
+#selview {
+    padding: 1ex;
     flex: 1;
 }

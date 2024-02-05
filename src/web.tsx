@@ -241,6 +241,20 @@ class TreeNode extends preact.Component<TreeNode.Props> {
     }
 }
 
+namespace SelView {
+    export interface Props {
+        buf: DataView;
+        sel?: Selection;
+    }
+}
+class SelView extends preact.Component<SelView.Props> {
+    render() {
+        return <div id='selview'>
+            <code>sel: {this.props.sel ? hex(this.props.sel.start) : ''}</code>
+        </div>;
+    }
+}
+
 namespace Page {
     export interface Props {
         buf: DataView;
@@ -258,7 +272,7 @@ class Page extends preact.Component<Page.Props, Page.State> {
     render() {
         return <main>
             <RawView buf={this.props.buf} sel={this.state.sel} onHover={this.onHover} />
-            <br />
+            <SelView buf={this.props.buf} sel={this.state.sel} />
             <div id='tree'>
                 <TreeNode name={'file'} inst={this.props.inst} onHover={this.onHover} />
             </div>
