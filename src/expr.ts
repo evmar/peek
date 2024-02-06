@@ -39,8 +39,23 @@ class ExprField implements Expr {
     }
 }
 
+class ExprIndex implements Expr {
+    constructor(readonly expr: Expr, readonly index: number) { }
+    evaluate(ctx: Context): schema.TypeInst {
+        const self = this.expr.evaluate(ctx);
+        if (!self.children) todo('no children');
+        if (this.index < 0 || this.index >= self.children.length) {
+            todo(`field ${this.index} not found`);
+        }
+        return self.children[this.index].inst;
+    }
+    sexp() {
+        return `(${this.expr.sexp()} [${this.index}])`;
+    }
+}
+
 export function parse(text: string): Expr {
-    const re = /(?<root>root)|(?:\.(?<field>[^.]+))/gy;
+    const re = /(?<root>root)|(?:\.(?<field>[^.\[]+)|(?:\[(?<index>\d+)\]))/gy;
     let expr = new ExprRoot(); // XXX
     let i = 0;
     while (re.lastIndex < text.length) {
@@ -51,6 +66,8 @@ export function parse(text: string): Expr {
             expr = new ExprRoot();
         } else if (m.groups['field']) {
             expr = new ExprField(expr, m.groups['field']);
+        } else if (m.groups['index']) {
+            expr = new ExprIndex(expr, parseInt(m.groups['index']));
         }
     }
     if (re.lastIndex < text.length) {

@@ -127,5 +127,11 @@ export const type = new schema.Struct([
     {
         ofs: 'root.dos.e_lfanew',
         name: 'IMAGE_NT_HEADERS32', type: IMAGE_NT_HEADERS32,
+    },
+    // TODO: maybe some sort of 'mapped' type here, it's 1:1 with .Sections
+    {
+        ofs: 'root.IMAGE_NT_HEADERS32.Sections[0].PointerToRawData',
+        name: 'Sections',
+        type: new schema.List(new schema.U32(), 1), // TODO
     }
 ]);
