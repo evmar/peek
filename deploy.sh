@@ -2,6 +2,6 @@
 
 set -e
 
-npm run build
 mkdir -p deploy
-cp src/{bundle.js,index.html,style.css} deploy
+npm run build
+cp src/{index.html,style.css} deploy

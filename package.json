@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "serve": "esbuild --bundle --target=es2020 --format=esm --sourcemap --servedir=src --outfile=src/bundle.js src/web.tsx",
-    "build": "esbuild --bundle --target=es2020 --format=esm --sourcemap --outfile=src/bundle.js src/web.tsx"
+    "build": "esbuild --bundle --target=es2020 --format=esm --sourcemap --outfile=deploy/bundle.js src/web.tsx"
   },
   "devDependencies": {
     "esbuild": "^0.17.14",
